@@ -6,69 +6,69 @@
 /*   By: atitus <marvin@42.fr>                      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2019/06/21 08:22:01 by atitus            #+#    #+#             */
-/*   Updated: 2019/06/26 08:34:18 by atitus           ###   ########.fr       */
+/*   Updated: 2019/07/02 11:37:00 by atitus           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "get_next_line.h"
 
-static int	add_line(char **s, char **line)
+static	int		readln(const int fd, char **str)
 {
-	int			len;
-	char		*tmp;
+	char			buff[BUFF_SIZE + 1];
+	char			*tmp;
+	int				ret;
 
-	len = 0;
-	while ((*s)[len] != '\n' && (*s)[len] != '\0')
-		len++;
-	if ((*s)[len] == '\n')
+	while (ft_strchr(str[fd], '\n') == NULL)
 	{
-		*line = ft_strsub(*s, 0, len);
-		tmp = ft_strdup(&((*s)[len + 1]));
-		free(*s);
-		*s = tmp;
-		if ((*s)[0] == '\0')
-			ft_strdel(s);
-	}
-	else
-	{
-		*line = ft_strdup(*s);
-		ft_strdel(s);
-	}
-	return (1);
-}
-
-static int	output(char **s, char **line, int ret, int fd)
-{
-	if (ret < 0)
-		return (-1);
-	else if (ret == 0 && s[fd] == NULL)
-		return (0);
-	else
-		return (add_line(&s[fd], line));
-}
-
-int			get_next_line(const int fd, char **line)
-{
-	int			ret;
-	static char	*s[FD_SIZE];
-	char		buff[BUFF_SIZE + 1];
-	char		*tmp;
-
-	if (fd < 0 || line == NULL)
-		return (-1);
-	while ((ret = read(fd, buff, BUFF_SIZE)) > 0)
-	{
-		buff[ret] = '\0';
-		if (s[fd] == NULL)
-			s[fd] = ft_strdup(buff);
-		else
-		{
-			tmp = ft_strjoin(s[fd], buff);
-			free(s[fd]);
-			s[fd] = tmp;
-		}
-		if (ft_strchr(s[fd], '\n'))
+		if ((ret = read(fd, buff, BUFF_SIZE)) == 0)
 			break ;
+		buff[ret] = '\0';
+		if (!(tmp = ft_strjoin(str[fd], buff)))
+			return (ret);
+		free(str[fd]);
+		str[fd] = tmp;
 	}
-	return (output(s, line, ret, fd));
+	return (ret);
+}
+
+static	void	addln(char **str, char **line)
+{
+	int				after;
+	char			*ptr;
+	int				len;
+	char			*tmp;
+
+	if (!(ptr = ft_strchr(*str, '\n')))
+		ptr = ft_strchr(*str, '\0');
+	len = ptr - *str;
+	*line = ft_strsub(*str, 0, len);
+	after = ft_strlen(*(str) + len + 1);
+	if (!(*ptr))
+		tmp = ft_strnew(0);
+	else
+		tmp = ft_strsub(*(str) + len + 1, 0, after);
+	free(*str);
+	*str = tmp;
+}
+
+int				get_next_line(const int fd, char **line)
+{
+	char			buff[BUFF_SIZE + 1];
+	static char		*str[FD_SIZE];
+	int				ret;
+
+	if (fd < 0 || read(fd, buff, 0) < 0 || !line)
+		return (-1);
+	if (str[fd] == NULL && !(str[fd] = ft_strnew(0)))
+		return (-1);
+	ret = readln(fd, str);
+	if (ret < BUFF_SIZE && !ft_strlen(str[fd]))
+		return (0);
+	if (str[fd])
+	{
+		addln(&str[fd], line);
+		return (1);
+	}
+	else
+		return (-1);
 }
